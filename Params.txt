@@ -1,0 +1,6 @@
+SMTPServer=smtp.gmail.com
+FromAddress=vidhyeshwar@gmail.com
+ToAddress=vidhyeshwar@gmail.com
+Subject=Your Name
+MainContentFile=C:\VidData\Experiments\SMTP\Debug\Content.html
+AttachmentFile=C:\VidData\Experiments\SMTP\Debug\Attachment.html
