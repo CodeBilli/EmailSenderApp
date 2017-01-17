@@ -14,6 +14,6 @@ Following are some of the features of this application:
 2. EmailSender.cpp and .h can be attached to any C++ application. Steps to invoke EmailSender can be found in smtp.cpp's main method.
 3. File Params.txt attached shows all the input properties.
 4. Attachment.html is the file to be attached with the email.
-5. content.txt is the main email content.
-6. Params.txt should be visible to the application running the code. Path to content.txt and Attachment.html can be provided through Params.txt
+5. Content.html is the main email content. This can be a txt file as well.
+6. Params.txt should be visible to the application running the code. Path to Content.html and Attachment.html can be provided through Params.txt
         
