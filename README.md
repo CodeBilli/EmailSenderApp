@@ -16,4 +16,14 @@ Following are some of the features of this application:
 4. Attachment.html is the file to be attached with the email.
 5. Content.html is the main email content. This can be a txt file as well.
 6. Params.txt should be visible to the application running the code. Path to Content.html and Attachment.html can be provided through Params.txt
+
+## Building steps
+
+In Unix,
+
+make clean
+make smtp
+
+In Windows, 
+create a project and include the files available here. Make sure openssl is available.
         
