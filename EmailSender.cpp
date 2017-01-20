@@ -1,5 +1,13 @@
 #include <iostream>
+#ifdef _WIN32
 #include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
@@ -66,18 +74,18 @@ EmailSender::EmailSender()
 
 }
 
-auto EmailSender::tokenize(string str, string delimiters) {
+vector<string> EmailSender::tokenize(string str, string delimiters) {
 	vector<string> v;
-	auto start = 0;
-	auto pos = str.find_first_of(delimiters, start);
+	int start = 0;
+	int pos = str.find_first_of(delimiters, start);
 	while (pos != string::npos) {
 		if (pos != start) // ignore empty tokens
-			v.emplace_back(str, start, pos - start);
+			v.push_back(str.substr(start, pos-start));
 		start = pos + 1;
 		pos = str.find_first_of(delimiters, start);
 	}
 	if (start < str.length()) // ignore trailing delimiter
-		v.emplace_back(str, start, str.length() - start); // add what's left of the string
+		v.push_back(str.substr(start, str.length() - start)); // add what's left of the string
 	return v;
 }
 
@@ -87,12 +95,12 @@ bool EmailSender::parseInputFile()
 
 	// Look for the file which contains all details...
 	string line;
-	ifstream pfile("Params.txt");
+	ifstream pfile("params.txt");
 	if (pfile.is_open())
 	{
 		while (getline(pfile, line))
 		{
-			auto v = tokenize(line, "=");
+			vector<string> v = tokenize(line, "=");
 			if (v[0] == "SMTPServer")
 			{
 				m_sSmtpServerName = v[1];
@@ -139,29 +147,39 @@ bool EmailSender::parseInputFile()
 
 int EmailSender::connectToSMTPServer()
 {
-	WSADATA     WSData;
-	LPHOSTENT   lpHostEntry;
-	LPSERVENT   lpServEntry;
-	SOCKADDR_IN SockAddr;
+
+	struct hostent*   lpHostEntry;
+	struct servent*   lpServEntry;
+	struct sockaddr_in SockAddr;
 
 	// Attempt to intialize WinSock (1.1 or later)
+#ifdef _WIN32
+	WSADATA     WSData;
 	if (WSAStartup(MAKEWORD(2, 2), &WSData))
 	{
 		cout << "Cannot find Winsock v2" << endl;
 		return -1;
 	}
+#endif
 
-	// Lookup email server's IP address.
-	lpHostEntry = gethostbyname(m_sSmtpServerName.c_str());
-	if (!lpHostEntry)
-	{
-		cout << "Cannot find SMTP mail server " << m_sSmtpServerName.c_str() << endl;
-		return -1;
+	cout << "calling gethostbyname for " << m_sSmtpServerName << endl;
+
+	struct addrinfo hints, *servinfo;
+	memset(&hints, 0, sizeof hints);
+	int rv = 0;
+	hints.ai_family = AF_UNSPEC; // use AF_INET6 to force IPv6
+	hints.ai_socktype = SOCK_STREAM;
+
+	if ((rv = getaddrinfo(m_sSmtpServerName.c_str(), "smtp", &hints, &servinfo)) != 0) {
+	    cout << "getaddrinfo: " << gai_strerror(rv) << endl;
+	    return -1;
 	}
+
+	cout << "After getaddrinfo" << endl;
 
 	// Create a TCP/IP socket, no specific protocol
 	m_socket = socket(PF_INET, SOCK_STREAM, 0);
-	if (m_socket == INVALID_SOCKET)
+	if (m_socket == -1)
 	{
 		cout << "Cannot open mail server socket" << endl;
 		return -1;
@@ -177,13 +195,8 @@ int EmailSender::connectToSMTPServer()
 	else
 		iProtocolPort = lpServEntry->s_port;
 
-	// Setup a Socket Address structure
-	SockAddr.sin_family = AF_INET;
-	SockAddr.sin_port = iProtocolPort;
-	SockAddr.sin_addr = *((LPIN_ADDR)*lpHostEntry->h_addr_list);
-
 	// Connect the Socket...
-	if (connect(m_socket, (PSOCKADDR)&SockAddr, sizeof(SockAddr)))
+	if (connect(m_socket, servinfo->ai_addr, servinfo->ai_addrlen))
 	{
 		cout << "Error connecting to Server socket" << endl;
 		return -1;
@@ -191,7 +204,11 @@ int EmailSender::connectToSMTPServer()
 
 	// 1 Sec Timeout
 	timeval tv;
+#ifdef _WIN32
 	tv.tv_sec = 1000;
+#else
+	tv.tv_sec = 1;
+#endif
 	tv.tv_usec = 0;
 	setsockopt(m_socket, SOL_SOCKET, SO_RCVTIMEO, (char*) &tv, sizeof(tv));
 
@@ -305,6 +322,7 @@ int EmailSender::exchangeMsgSecurelyWithServer(string sMessage)
 
 int EmailSender::sendEmail()
 {
+	cout << "Connecting to the SMTP server..." << endl;
 	// Create Socket and connect to the server...
 	int ret = connectToSMTPServer();
 	if (ret > 0)
@@ -381,9 +399,16 @@ int EmailSender::sendEmail()
 
 		// Close server socket and prepare to exit.
 		cout << "Closing connection" << endl;
-		closesocket(m_socket);
 
+#ifdef _WIN32
+		closesocket(m_socket);
+#else
+		close(m_socket);
+#endif
+
+#ifdef _WIN32
 		WSACleanup();
+#endif
 		cout << "Bye!" << endl;
 	}
 	return 1;
@@ -459,7 +484,7 @@ char* EmailSender::getContent(string sFilePath, unsigned int &fileSize)
 {
 	char* buffer = NULL;
 
-	ifstream infile1(sFilePath);
+	ifstream infile1(sFilePath.c_str());
 	if (infile1.is_open())
 	{
 		// get size of file
