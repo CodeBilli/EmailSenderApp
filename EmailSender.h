@@ -19,7 +19,7 @@ private:
 	int exchangeMsgSecurelyWithServer(string message);
 	int establishSecureConnection();
 	int receiveDataFromServer(bool bSecured);
-	auto tokenize(string str, string delimiters);
+	vector<string> tokenize(string str, string delimiters);
 	void sendContentWithoutAttachment();
 	void sendContentWithAttachment();
 	string base64Encode(char const* bytes_to_encode, unsigned int in_len);
