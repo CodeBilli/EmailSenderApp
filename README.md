@@ -1,5 +1,5 @@
 # EmailSenderApp
-This project provides source code for C++ based Email sending application. Currently written for Windows. Will be extended to Linux shortly.
+This project provides source code for C++ based Email sending application. Supports both Windows and Unix.
 
 Following are some of the features of this application:
 
