@@ -1,5 +1,6 @@
 #include <winsock2.h>
 #include <string>
+#include <vector>
 #include <iostream>
 
 #include <openssl/ssl.h>
